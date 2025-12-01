@@ -112,6 +112,89 @@ elif app_mode == "Visualization":
 
     list_vars = df.columns
     
+########### Prediction:
+if app_mode == "Prediction":
+    st.markdown("### Prediction")
+
+    # Target column: temperature
+    target_col = "Avg Temperature (°C)"
+    st.write(f"Target variable: **{target_col}**")
+
+    # Choose train set size (proportion of data used for training)
+    train_size = st.sidebar.number_input(
+        "Train Set Size (proportion)",
+        min_value=0.10,
+        max_value=0.90,
+        step=0.05,
+        value=0.70
+    )
+
+    # Use only numeric columns as possible features
+    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+
+    # Remove target from feature candidates
+    if target_col in numeric_cols:
+        numeric_cols.remove(target_col)
+
+    st.markdown("#### Select Explanatory Variables (features)")
+    feature_cols = st.multiselect(
+        "Choose features to use in the model",
+        numeric_cols,
+        default=numeric_cols  # by default use all numeric features except target
+    )
+
+    if not feature_cols:
+        st.warning("Please select at least one feature.")
+    else:
+        # X = features, y = target
+        X = df[feature_cols]
+        y = df[target_col]
+
+        # Show a preview of the data used
+        col1, col2 = st.columns(2)
+        col1.subheader("Feature Columns (top 10 rows)")
+        col1.write(X.head(10))
+
+        col2.subheader("Target Column (top 10 rows)")
+        col2.write(y.head(10))
+
+        # Train-test split
+        X_train, X_test, y_train, y_test = train_test_split(
+            X,
+            y,
+            test_size=1 - train_size,
+            random_state=42
+        )
+
+        # Linear Regression model
+        model = LinearRegression()
+        model.fit(X_train, y_train)
+
+        # Predictions on test set
+        y_pred = model.predict(X_test)
+
+        # ==========================
+        #   Metrics and results
+        # ==========================
+        st.markdown("### Model Performance")
+
+        mse = mean_squared_error(y_test, y_pred)
+        mae = mean_absolute_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+
+        c1, c2, c3 = st.columns(3)
+        c1.metric("MSE", f"{mse:.2f}")
+        c2.metric("MAE", f"{mae:.2f}")
+        c3.metric("R² Score", f"{r2:.3f}")
+
+        st.markdown("### Actual vs Predicted Temperature (sample)")
+        results_df = (
+            pd.DataFrame({"Actual": y_test.values, "Predicted": y_pred})
+            .reset_index(drop=True)
+        )
+        st.dataframe(results_df.head(20))
+
+    
     
 
 
